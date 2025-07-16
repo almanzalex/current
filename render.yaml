@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: current
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./build
+    envVars:
+      - key: NODE_VERSION
+        value: 18.0.0
+      - key: REACT_APP_NEWS_API_KEY
+        sync: false
+      - key: REACT_APP_TWITTER_API_KEY
+        sync: false
+      - key: REACT_APP_FINNHUB_API_KEY
+        sync: false
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache 
