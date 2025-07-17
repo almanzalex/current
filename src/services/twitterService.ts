@@ -1,8 +1,10 @@
-import axios from 'axios';
 import { Tweet, SentimentScore } from '../types';
 
-const TWITTER_API_KEY = process.env.REACT_APP_TWITTER_API_KEY;
-const TWITTER_API_BASE_URL = 'https://api.twitter.com/2';
+const BACKEND_URL = 'http://localhost:3001';
+
+console.log('TwitterService Debug:');
+console.log('Backend URL:', BACKEND_URL);
+console.log('Using real social media data via backend server (Reddit API)');
 
 const analyzeSentiment = (text: string): SentimentScore => {
   // Simple sentiment analysis based on keyword matching
@@ -32,6 +34,44 @@ const analyzeSentiment = (text: string): SentimentScore => {
 export const twitterService = {
   async getTweets(searchTerm: string, timeRange: string): Promise<Tweet[]> {
     try {
+      console.log(`Fetching real social media data for term: ${searchTerm}, timeRange: ${timeRange}`);
+      
+      // Call the backend API for real social media data from Reddit
+      const response = await fetch(`${BACKEND_URL}/api/social/${encodeURIComponent(searchTerm)}?timeRange=${timeRange}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('Backend response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const socialPosts = await response.json();
+      console.log(`Received ${socialPosts.length} real social media posts for ${searchTerm}`);
+      
+      // Convert Reddit posts to Tweet format for compatibility
+      const realTweets: Tweet[] = socialPosts.map((post: any, index: number) => ({
+        id: post.id || index.toString(),
+        text: post.text,
+        created_at: post.createdAt,
+        author_username: `${post.author} (${post.source})`,
+        sentiment: {
+          label: post.sentiment?.label || 'neutral',
+          score: post.sentiment?.score || 0,
+          confidence: Math.abs(post.sentiment?.score || 0),
+        },
+      }));
+
+      console.log(`Returning ${realTweets.length} real social media posts`);
+      return realTweets;
+      
+      // TODO: Uncomment below when Twitter API access is properly configured
+      /*
       // Calculate start_time based on timeRange
       const now = new Date();
       const startTime = new Date(now.getTime());
@@ -71,9 +111,15 @@ export const twitterService = {
         author_username: tweet.author_id, // In real implementation, we'd get the actual username
         sentiment: analyzeSentiment(tweet.text),
       }));
-    } catch (error) {
-      console.error('Error fetching tweets:', error);
-      throw error;
+      */
+    } catch (error: any) {
+      console.error('Error fetching social media data:', error);
+      
+      if (error.message.includes('fetch') || error.name === 'TypeError') {
+        throw new Error('Backend server is not running. Please start the backend server on port 3001.');
+      }
+      
+      throw new Error(`Failed to fetch social media data for ${searchTerm}: ${error.message}`);
     }
   },
 }; 

@@ -1,53 +1,43 @@
-import axios from 'axios';
 import { NewsArticle } from '../types';
 
-const NEWS_API_KEY = process.env.REACT_APP_NEWS_API_KEY;
-const NEWS_API_BASE_URL = 'https://newsapi.org/v2';
+const BACKEND_URL = 'http://localhost:3001';
+
+console.log('NewsService Debug:');
+console.log('Backend URL:', BACKEND_URL);
+console.log('Using real API data via backend server');
 
 export const newsService = {
   async getNews(searchTerm: string, timeRange: string): Promise<NewsArticle[]> {
     try {
-      // Calculate the from date based on timeRange
-      const now = new Date();
-      const from = new Date(now.getTime());
+      console.log(`Fetching real news for term: ${searchTerm}, timeRange: ${timeRange}`);
       
-      switch (timeRange) {
-        case '1h':
-          from.setHours(now.getHours() - 1);
-          break;
-        case '24h':
-          from.setDate(now.getDate() - 1);
-          break;
-        case '7d':
-          from.setDate(now.getDate() - 7);
-          break;
-        case '30d':
-          from.setDate(now.getDate() - 30);
-          break;
-      }
-
-      const response = await axios.get(`${NEWS_API_BASE_URL}/everything`, {
-        params: {
-          q: searchTerm,
-          from: from.toISOString(),
-          sortBy: 'publishedAt',
-          language: 'en',
-          apiKey: NEWS_API_KEY,
+      // Call the backend API
+      const response = await fetch(`${BACKEND_URL}/api/news/${encodeURIComponent(searchTerm)}?timeRange=${timeRange}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         },
       });
 
-      return response.data.articles.map((article: any) => ({
-        title: article.title,
-        description: article.description,
-        url: article.url,
-        publishedAt: article.publishedAt,
-        source: {
-          name: article.source.name,
-        },
-      }));
-    } catch (error) {
+      console.log('Backend response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const newsArticles: NewsArticle[] = await response.json();
+      console.log(`Received ${newsArticles.length} real news articles for ${searchTerm}`);
+      
+      return newsArticles;
+    } catch (error: any) {
       console.error('Error fetching news:', error);
-      throw error;
+      
+      if (error.message.includes('fetch') || error.name === 'TypeError') {
+        throw new Error('Backend server is not running. Please start the backend server on port 3001.');
+      }
+      
+      throw new Error(`Failed to fetch news for ${searchTerm}: ${error.message}`);
     }
   },
 }; 

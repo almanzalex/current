@@ -13,7 +13,7 @@ A real-time dashboard that correlates news articles, social media sentiment, and
 
 ## Prerequisites
 
-- Node.js and npm installed
+- Node.js anpm installed
 - API keys for:
   - NewsAPI
   - Twitter/X API

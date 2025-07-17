@@ -1,132 +1,48 @@
-import axios from 'axios';
 import { StockData } from '../types';
 
-const FINNHUB_API_KEY = process.env.REACT_APP_FINNHUB_API_KEY;
-const FINNHUB_API_BASE_URL = 'https://finnhub.io/api/v1';
+const BACKEND_URL = 'http://localhost:3001';
 
-// Configure axios defaults for Finnhub
-const finnhubClient = axios.create({
-  baseURL: FINNHUB_API_BASE_URL,
-  headers: {
-    'X-Finnhub-Token': FINNHUB_API_KEY,
-  },
-  timeout: 10000, // 10 second timeout
-});
+// Debug logging
+console.log('StockService Debug:');
+console.log('Backend URL:', BACKEND_URL);
+console.log('Using real API data via backend server');
 
 export const stockService = {
   async getStockData(symbol: string, timeRange: string): Promise<StockData[]> {
     try {
+      console.log(`Fetching real stock data for symbol: ${symbol}`);
+      
       // Ensure symbol is properly formatted
       const formattedSymbol = symbol.trim().toUpperCase();
+      console.log(`Formatted symbol: ${formattedSymbol}`);
 
-      // Get real-time quote data
-      const quoteResponse = await finnhubClient.get('/quote', {
-        params: {
-          symbol: formattedSymbol,
+      // Call the backend API
+      const response = await fetch(`${BACKEND_URL}/api/stock/${formattedSymbol}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         },
       });
 
-      if (!quoteResponse.data || typeof quoteResponse.data.c !== 'number') {
-        throw new Error(`No quote data available for symbol ${formattedSymbol}. Please check if the symbol is valid.`);
+      console.log('Backend response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const quote = quoteResponse.data;
-      const currentTimestamp = Math.floor(Date.now() / 1000);
+      const stockData: StockData[] = await response.json();
+      console.log(`Received ${stockData.length} real data points for ${formattedSymbol}`);
       
-      // Since we can't access historical data with the free API key,
-      // we'll create a simple dataset showing current price, previous close,
-      // and simulate some data points for visualization
-      const dataPoints: StockData[] = [];
-      
-      // Add previous close as the first data point
-      if (quote.pc && quote.pc > 0) {
-        dataPoints.push({
-          timestamp: currentTimestamp - 86400, // 24 hours ago
-          price: quote.pc,
-          volume: 0,
-        });
-      }
-      
-      // Add some intermediate points for better visualization
-      // This simulates price movement between previous close and current price
-      if (quote.pc && quote.pc > 0 && quote.c !== quote.pc) {
-        const priceChange = quote.c - quote.pc;
-        const steps = 5;
-        
-        for (let i = 1; i < steps; i++) {
-          const ratio = i / steps;
-          const interpolatedPrice = quote.pc + (priceChange * ratio);
-          dataPoints.push({
-            timestamp: currentTimestamp - 86400 + (86400 * ratio),
-            price: interpolatedPrice,
-            volume: 0,
-          });
-        }
-      }
-      
-      // Add current price as the final data point
-      dataPoints.push({
-        timestamp: currentTimestamp,
-        price: quote.c,
-        volume: 0,
-      });
-
-      return dataPoints;
+      return stockData;
     } catch (error: any) {
       console.error('Error fetching stock data:', error);
-      if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        if (error.response.status === 429) {
-          throw new Error('API rate limit exceeded. Please try again later.');
-        } else if (error.response.status === 403) {
-          throw new Error('Access denied. This endpoint may require a paid API subscription.');
-        } else if (error.response.status === 426) {
-          throw new Error('API upgrade required. Please check your API key and subscription.');
-        } else if (error.response.status === 404) {
-          throw new Error(`Stock symbol "${symbol}" not found. Please check the symbol and try again.`);
-        }
-        throw new Error(`API Error: ${error.response.data?.error || 'Unknown error'}`);
-      } else if (error.request) {
-        throw new Error('No response received from Finnhub API. Please check your internet connection.');
-      } else {
-        throw error;
+      
+      if (error.message.includes('fetch') || error.name === 'TypeError') {
+        throw new Error('Backend server is not running. Please start the backend server on port 3001.');
       }
-    }
-  },
-
-  async getSymbol(query: string): Promise<string> {
-    try {
-      const response = await finnhubClient.get('/search', {
-        params: {
-          q: query.trim(),
-        },
-      });
-
-      const results = response.data?.result;
-      if (!results || !results.length) {
-        throw new Error(`No symbol found for query: ${query}`);
-      }
-
-      // Find the best match (prefer exact matches and US exchanges)
-      const bestMatch = results.find(
-        (r: any) => r.symbol.toUpperCase() === query.trim().toUpperCase()
-      ) || results[0];
-
-      return bestMatch.symbol;
-    } catch (error: any) {
-      console.error('Error fetching symbol:', error);
-      if (error.response) {
-        if (error.response.status === 429) {
-          throw new Error('API rate limit exceeded. Please try again later.');
-        } else if (error.response.status === 403) {
-          throw new Error('Invalid API key or unauthorized access.');
-        }
-        throw new Error(`API Error: ${error.response.data?.error || 'Unknown error'}`);
-      } else if (error.request) {
-        throw new Error('No response received from Finnhub API. Please check your connection.');
-      }
-      throw error;
+      
+      throw new Error(`Failed to fetch stock data for ${symbol}: ${error.message}`);
     }
   },
 }; 
