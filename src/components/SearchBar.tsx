@@ -3,7 +3,7 @@ import { useStore } from '../store';
 
 const SearchBar: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
-  const setSearchTerm = useStore(state => state.setSearchTerm);
+  const { setSearchTerm } = useStore();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -15,19 +15,37 @@ const SearchBar: React.FC = () => {
   return (
     <form onSubmit={handleSubmit} className="w-full">
       <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg
+            className="h-5 w-5 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </div>
         <input
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Enter a company name, stock symbol, or topic..."
-          className="w-full px-4 py-2 text-gray-900 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Search for stocks, companies, or topics (e.g., AAPL, Tesla, AI)"
+          className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
         />
-        <button
-          type="submit"
-          className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        >
-          Search
-        </button>
+        <div className="absolute inset-y-0 right-0 flex items-center">
+          <button
+            type="submit"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-lg transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Search
+          </button>
+        </div>
       </div>
     </form>
   );

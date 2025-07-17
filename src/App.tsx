@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useStore } from './store';
 import SearchBar from './components/SearchBar';
 import NewsPanel from './components/NewsPanel';
@@ -20,11 +20,16 @@ function App() {
     fetchData,
   } = useStore();
 
+  // Wrap fetchData with useCallback to prevent unnecessary re-renders
+  const handleFetchData = useCallback((term: string) => {
+    fetchData(term);
+  }, [fetchData]);
+
   useEffect(() => {
     if (searchTerm) {
-      fetchData(searchTerm);
+      handleFetchData(searchTerm);
     }
-  }, [searchTerm, timeRange]);
+  }, [searchTerm, timeRange, handleFetchData]);
 
   return (
     <div className="min-h-screen bg-gray-100">

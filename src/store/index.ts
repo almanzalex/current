@@ -22,20 +22,17 @@ export const useStore = create<AppState>((set, get) => ({
 
     try {
       // Fetch data in parallel
-      const [newsPromise, tweetsPromise, symbolPromise] = [
+      const [newsPromise, tweetsPromise, stockDataPromise] = [
         newsService.getNews(term, timeRange),
         twitterService.getTweets(term, timeRange),
-        stockService.getSymbol(term),
+        stockService.getStockData(term, timeRange), // Use term directly as stock symbol
       ];
 
-      const [news, tweets, symbol] = await Promise.all([
+      const [news, tweets, stockData] = await Promise.all([
         newsPromise,
         tweetsPromise,
-        symbolPromise,
+        stockDataPromise,
       ]);
-
-      // Once we have the symbol, fetch stock data
-      const stockData = await stockService.getStockData(symbol, timeRange);
 
       set({
         news,
