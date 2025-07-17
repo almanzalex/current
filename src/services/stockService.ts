@@ -15,7 +15,21 @@ const finnhubClient = axios.create({
 export const stockService = {
   async getStockData(symbol: string, timeRange: string): Promise<StockData[]> {
     try {
-      // Calculate from and to timestamps
+      // Ensure symbol is properly formatted
+      const formattedSymbol = symbol.trim().toUpperCase();
+
+      // Get real-time quote first
+      const quoteResponse = await finnhubClient.get('/quote', {
+        params: {
+          symbol: formattedSymbol,
+        },
+      });
+
+      if (!quoteResponse.data || typeof quoteResponse.data.c !== 'number') {
+        throw new Error(`No quote data available for symbol ${formattedSymbol}`);
+      }
+
+      // Calculate from and to timestamps for historical data
       const to = Math.floor(Date.now() / 1000);
       let from = to;
       
@@ -36,10 +50,8 @@ export const stockService = {
 
       const resolution = timeRange === '1h' ? '1' : timeRange === '24h' ? '15' : 'D';
 
-      // Ensure symbol is properly formatted
-      const formattedSymbol = symbol.trim().toUpperCase();
-
-      const response = await finnhubClient.get('/stock/candle', {
+      // Get historical data
+      const candleResponse = await finnhubClient.get('/stock/candle', {
         params: {
           symbol: formattedSymbol,
           resolution: resolution,
@@ -48,19 +60,39 @@ export const stockService = {
         },
       });
 
-      if (response.data.s === 'no_data') {
-        throw new Error(`No data available for symbol ${formattedSymbol}`);
+      if (candleResponse.data.s === 'no_data') {
+        // If no historical data, return just the current quote
+        return [{
+          timestamp: Math.floor(Date.now() / 1000),
+          price: quoteResponse.data.c,
+          volume: 0,
+        }];
       }
 
-      if (response.data.s !== 'ok') {
+      if (candleResponse.data.s !== 'ok') {
         throw new Error(`Invalid response from Finnhub API for symbol ${formattedSymbol}`);
       }
 
-      return response.data.t.map((timestamp: number, index: number) => ({
+      // Combine historical data with current quote
+      const historicalData = candleResponse.data.t.map((timestamp: number, index: number) => ({
         timestamp,
-        price: response.data.c[index],
-        volume: response.data.v[index],
+        price: candleResponse.data.c[index],
+        volume: candleResponse.data.v[index],
       }));
+
+      // Add current quote if it's newer than the last historical data point
+      const lastHistoricalTimestamp = historicalData[historicalData.length - 1]?.timestamp || 0;
+      const currentTimestamp = Math.floor(Date.now() / 1000);
+
+      if (currentTimestamp > lastHistoricalTimestamp) {
+        historicalData.push({
+          timestamp: currentTimestamp,
+          price: quoteResponse.data.c,
+          volume: 0,
+        });
+      }
+
+      return historicalData;
     } catch (error: any) {
       console.error('Error fetching stock data:', error);
       if (error.response) {
@@ -70,13 +102,15 @@ export const stockService = {
           throw new Error('API rate limit exceeded. Please try again later.');
         } else if (error.response.status === 403) {
           throw new Error('Invalid API key or unauthorized access.');
+        } else if (error.response.status === 426) {
+          throw new Error('API upgrade required. Please check your API key and subscription.');
         }
         throw new Error(`API Error: ${error.response.data?.error || 'Unknown error'}`);
       } else if (error.request) {
-        // The request was made but no response was received
         throw new Error('No response received from Finnhub API. Please check your connection.');
+      } else {
+        throw error;
       }
-      throw error;
     }
   },
 
