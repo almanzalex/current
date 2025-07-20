@@ -58,13 +58,18 @@ export const twitterService = {
       const realTweets: Tweet[] = socialPosts.map((post: any, index: number) => ({
         id: post.id || index.toString(),
         text: post.text,
-        created_at: post.createdAt,
-        author_username: `${post.author} (${post.source})`,
+        description: post.description,
+        author: post.author,
+        createdAt: post.createdAt,
+        source: post.source,
+        url: post.url,
+        score: post.score,
+        platform: 'reddit',
         sentiment: {
           label: post.sentiment?.label || 'neutral',
           score: post.sentiment?.score || 0,
-          confidence: Math.abs(post.sentiment?.score || 0),
         },
+        aiSummary: post.aiSummary,
       }));
 
       console.log(`Returning ${realTweets.length} real social media posts`);

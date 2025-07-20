@@ -20,7 +20,6 @@ function App() {
     fetchData,
   } = useStore();
 
-  // Wrap fetchData with useCallback to prevent unnecessary re-renders
   const handleFetchData = useCallback((term: string) => {
     fetchData(term);
   }, [fetchData]);
@@ -32,59 +31,97 @@ function App() {
   }, [searchTerm, timeRange, handleFetchData]);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      <header className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-gray-900">Current</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Real-time news, social media, and stock market correlation
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Current
+              </h1>
+              <p className="mt-1 text-sm text-gray-600">
+                Real-time financial intelligence powered by AI
+              </p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <TimeRangeSelector
+                value={timeRange}
+                onChange={setTimeRange}
+              />
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="flex items-center space-x-4 mb-6">
-            <div className="flex-grow">
-              <SearchBar />
-            </div>
-            <TimeRangeSelector
-              value={timeRange}
-              onChange={setTimeRange}
-            />
-          </div>
+      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <SearchBar />
+        </div>
 
-          {error && (
-            <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700 font-medium">{error}</p>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+        {searchTerm && (
+          <div className="mb-6 text-center">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+              Analysis for {searchTerm.toUpperCase()}
+            </h2>
+            <p className="text-gray-600">
+              {isLoading ? 'Analyzing market data...' : 'Market intelligence dashboard'}
+            </p>
+          </div>
+        )}
+
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200"></div>
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent absolute top-0 left-0"></div>
             </div>
-          ) : (
-            <div className="space-y-6">
-              <TimelineChart />
-              
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          </div>
+        ) : searchTerm ? (
+          <div className="space-y-8">
+            <TimelineChart />
+            
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <div className="xl:col-span-1">
                 <NewsPanel news={news} />
+              </div>
+              <div className="xl:col-span-1">
                 <SocialPanel tweets={tweets} />
+              </div>
+              <div className="xl:col-span-1">
                 <StockPanel data={stockData} news={news} tweets={tweets} />
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="text-center py-16">
+            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center">
+              <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Welcome to Current
+            </h3>
+            <p className="text-gray-600 max-w-md mx-auto">
+              Search for any stock symbol to get real-time market intelligence, news analysis, and social sentiment powered by AI
+            </p>
+          </div>
+        )}
       </main>
     </div>
   );

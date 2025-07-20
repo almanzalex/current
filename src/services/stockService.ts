@@ -10,14 +10,14 @@ console.log('Using real API data via backend server');
 export const stockService = {
   async getStockData(symbol: string, timeRange: string): Promise<StockData[]> {
     try {
-      console.log(`Fetching real stock data for symbol: ${symbol}`);
+      console.log(`Fetching real stock data for symbol: ${symbol}, timeRange: ${timeRange}`);
       
       // Ensure symbol is properly formatted
       const formattedSymbol = symbol.trim().toUpperCase();
       console.log(`Formatted symbol: ${formattedSymbol}`);
 
-      // Call the backend API
-      const response = await fetch(`${BACKEND_URL}/api/stock/${formattedSymbol}`, {
+      // Call the backend API with timeRange parameter
+      const response = await fetch(`${BACKEND_URL}/api/stock/${formattedSymbol}?timeRange=${timeRange}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -32,7 +32,7 @@ export const stockService = {
       }
 
       const stockData: StockData[] = await response.json();
-      console.log(`Received ${stockData.length} real data points for ${formattedSymbol}`);
+      console.log(`Received ${stockData.length} real data points for ${formattedSymbol} over ${timeRange}`);
       
       return stockData;
     } catch (error: any) {

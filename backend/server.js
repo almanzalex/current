@@ -7,7 +7,7 @@ require('dotenv').config({ path: '../.env' });
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Initialize OpenAI
+// Initialize OpenAI with configuration
 const openai = new OpenAI({
   apiKey: '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'
 });
@@ -54,7 +54,9 @@ app.use(express.json());
 
 // API Keys
 const FINNHUB_API_KEY = process.env.REACT_APP_FINNHUB_API_KEY;
-const NEWS_API_KEY = process.env.REACT_APP_NEWS_API_KEY;
+const NEWS_API_KEY = process.env.REACT_APP_NEWS_API_KEY || '0d1612bb8edc4f2393e69b566f80a3aa';
+const REDDIT_CLIENT_ID = process.env.REDDIT_CLIENT_ID;
+const REDDIT_CLIENT_SECRET = process.env.REDDIT_CLIENT_SECRET;
 
 console.log('Backend Server Starting...');
 console.log('Finnhub API Key available:', FINNHUB_API_KEY ? 'YES' : 'NO');
@@ -64,13 +66,14 @@ console.log('News API Key available:', NEWS_API_KEY ? 'YES' : 'NO');
 app.get('/api/stock/:symbol', async (req, res) => {
   try {
     const { symbol } = req.params;
-    console.log(`Fetching stock data for: ${symbol}`);
+    const { timeRange = '7d' } = req.query;
+    
+    console.log(`Fetching stock data for: ${symbol}, timeRange: ${timeRange}`);
 
     if (!FINNHUB_API_KEY) {
       return res.status(500).json({ error: 'Finnhub API key not configured' });
     }
 
-    // Get real-time quote from Finnhub
     const response = await axios.get(`https://finnhub.io/api/v1/quote`, {
       params: {
         symbol: symbol.toUpperCase()
@@ -87,42 +90,75 @@ app.get('/api/stock/:symbol', async (req, res) => {
       return res.status(404).json({ error: `No data found for symbol ${symbol}` });
     }
 
-    // Generate time series data with current price and previous close
+    // Calculate time range in seconds
+    let timeRangeSeconds;
+    let dataPointsCount;
+    
+    switch (timeRange) {
+      case '1h':
+        timeRangeSeconds = 3600; // 1 hour
+        dataPointsCount = 12; // 5-minute intervals
+        break;
+      case '24h':
+        timeRangeSeconds = 86400; // 24 hours
+        dataPointsCount = 24; // 1-hour intervals
+        break;
+      case '7d':
+        timeRangeSeconds = 604800; // 7 days
+        dataPointsCount = 28; // 6-hour intervals
+        break;
+      case '30d':
+        timeRangeSeconds = 2592000; // 30 days
+        dataPointsCount = 30; // 1-day intervals
+        break;
+      default:
+        timeRangeSeconds = 604800; // Default to 7 days
+        dataPointsCount = 28;
+    }
+
+    // Generate time series data
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const dataPoints = [];
 
-    // Add previous close as starting point
-    if (quote.pc && quote.pc > 0) {
+    // Calculate price volatility for realistic data generation
+    const priceVolatility = Math.abs(quote.c - (quote.pc || quote.c)) / quote.c;
+    const basePrice = quote.pc || quote.c;
+    const currentPrice = quote.c;
+
+    // Generate historical data points
+    for (let i = 0; i < dataPointsCount; i++) {
+      const timeOffset = (timeRangeSeconds / dataPointsCount) * i;
+      const timestamp = currentTimestamp - timeRangeSeconds + timeOffset;
+      
+      // Create realistic price movement
+      let price;
+      if (i === 0) {
+        // Start with previous close or current price
+        price = basePrice;
+      } else if (i === dataPointsCount - 1) {
+        // End with current price
+        price = currentPrice;
+      } else {
+        // Interpolate with some randomness
+        const progress = i / (dataPointsCount - 1);
+        const linearPrice = basePrice + (currentPrice - basePrice) * progress;
+        const randomFactor = 1 + (Math.random() - 0.5) * priceVolatility * 0.5;
+        price = linearPrice * randomFactor;
+      }
+
+      // Generate realistic volume
+      const baseVolume = Math.floor(Math.random() * 2000000) + 500000;
+      const volumeMultiplier = 0.5 + Math.random() * 1.5; // 50% to 150% variation
+      const volume = Math.floor(baseVolume * volumeMultiplier);
+
       dataPoints.push({
-        timestamp: currentTimestamp - 86400, // 24 hours ago
-        price: quote.pc,
-        volume: Math.floor(Math.random() * 1000000) + 500000
+        timestamp,
+        price: Math.round(price * 100) / 100, // Round to 2 decimal places
+        volume
       });
     }
 
-    // Add some intermediate points for visualization
-    if (quote.pc && quote.pc > 0 && quote.c !== quote.pc) {
-      const priceChange = quote.c - quote.pc;
-      const steps = 8;
-      
-      for (let i = 1; i < steps; i++) {
-        const ratio = i / steps;
-        const interpolatedPrice = quote.pc + (priceChange * ratio);
-        dataPoints.push({
-          timestamp: currentTimestamp - 86400 + (86400 * ratio),
-          price: interpolatedPrice,
-          volume: Math.floor(Math.random() * 1000000) + 500000
-        });
-      }
-    }
-
-    // Add current price
-    dataPoints.push({
-      timestamp: currentTimestamp,
-      price: quote.c,
-      volume: Math.floor(Math.random() * 1000000) + 500000
-    });
-
+    console.log(`Generated ${dataPoints.length} data points for ${timeRange} time range`);
     res.json(dataPoints);
   } catch (error) {
     console.error('Stock API error:', error.message);
@@ -213,6 +249,7 @@ app.get('/api/news/:searchTerm', async (req, res) => {
       .filter((article, index, self) => 
         index === self.findIndex(a => a.title === article.title)
       )
+      .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
       .slice(0, 10);
 
     // Generate AI summaries for each article
@@ -269,23 +306,44 @@ app.get('/api/social/:searchTerm', async (req, res) => {
 
     for (const subreddit of subreddits) {
       try {
+        console.log(`Fetching from r/${subreddit} for search term: ${searchTerm}`);
+        
         const response = await axios.get(`https://www.reddit.com/r/${subreddit}/search.json`, {
           params: {
             q: searchTerm,
             restrict_sr: 1,
-            sort: 'relevance',
+            sort: 'new',
             t: timeFilter,
             limit: 5
           },
           headers: {
-            'User-Agent': 'CurrentApp/1.0'
+            'User-Agent': 'CurrentApp/1.0 (by /u/currentapp)'
           }
         });
+
+        console.log(`Response from r/${subreddit}:`, {
+          status: response.status,
+          dataLength: response.data?.data?.children?.length || 0
+        });
+
+        if (!response.data?.data?.children) {
+          console.log(`No data returned from r/${subreddit}`);
+          continue;
+        }
 
         const posts = response.data.data.children
           .filter(post => post.data.title && post.data.selftext !== '[removed]')
           .map(post => {
             const data = post.data;
+            console.log('Processing Reddit post:', {
+              id: data.id,
+              title: data.title,
+              permalink: data.permalink,
+              created_utc: data.created_utc,
+              created_utc_type: typeof data.created_utc,
+              url: data.url,
+              subreddit: data.subreddit
+            });
             
             // Simple sentiment analysis
             const text = `${data.title} ${data.selftext || ''}`.toLowerCase();
@@ -299,21 +357,43 @@ app.get('/api/social/:searchTerm', async (req, res) => {
             if (positiveCount > negativeCount) sentiment = 'positive';
             else if (negativeCount > positiveCount) sentiment = 'negative';
 
-            return {
-              id: data.id,
-              text: data.title,
+            // Ensure we always have a valid URL
+            let postUrl;
+            if (data.permalink) {
+              postUrl = `https://www.reddit.com${data.permalink}`;
+            } else if (data.url && data.url.startsWith('http')) {
+              postUrl = data.url;
+            } else {
+              // Fallback to subreddit URL
+              postUrl = `https://www.reddit.com/r/${data.subreddit || subreddit}`;
+            }
+
+            const postData = {
+              id: data.id || `reddit_${Date.now()}_${Math.random()}`,
+              text: data.title || 'Reddit Post',
               description: data.selftext ? data.selftext.substring(0, 200) + '...' : '',
-              author: `r/${subreddit}`,
-              createdAt: new Date(data.created_utc * 1000).toISOString(),
-              source: `r/${subreddit}`,
-              url: `https://reddit.com${data.permalink}`,
-              score: data.score,
+              author: `r/${data.subreddit || subreddit}`,
+              createdAt: data.created_utc ? new Date(data.created_utc * 1000).toISOString() : new Date().toISOString(),
+              source: `r/${data.subreddit || subreddit}`,
+              url: postUrl,
+              score: data.score || 0,
               platform: 'reddit',
               sentiment: {
                 label: sentiment,
                 score: (positiveCount - negativeCount) / Math.max(positiveCount + negativeCount, 1)
               }
             };
+            
+            console.log('Processed post data:', {
+              id: postData.id,
+              text: postData.text,
+              url: postData.url,
+              author: postData.author,
+              createdAt: postData.createdAt,
+              original_created_utc: data.created_utc,
+              converted_date: data.created_utc ? new Date(data.created_utc * 1000).toLocaleString() : 'N/A'
+            });
+            return postData;
           });
 
         allPosts = allPosts.concat(posts);
@@ -330,8 +410,15 @@ app.get('/api/social/:searchTerm', async (req, res) => {
       .filter((post, index, self) => 
         index === self.findIndex(p => p.text === post.text)
       )
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(0, 10);
+
+    // Debug: Log the sorted posts with their dates
+    console.log('\n=== REDDIT POSTS SORTING DEBUG ===');
+    uniquePosts.forEach((post, index) => {
+      console.log(`${index + 1}. "${post.text}" - Created: ${post.createdAt} (${new Date(post.createdAt).toLocaleString()})`);
+    });
+    console.log('=== END SORTING DEBUG ===\n');
 
     // Generate AI summaries for each post
     const postsWithSummaries = await Promise.all(
@@ -358,9 +445,6 @@ app.get('/api/social/:searchTerm', async (req, res) => {
 
 // Health check route
 app.get('/health', (req, res) => {
-  const FINNHUB_API_KEY = process.env.REACT_APP_FINNHUB_API_KEY;
-  const NEWS_API_KEY = process.env.REACT_APP_NEWS_API_KEY;
-
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
@@ -374,7 +458,7 @@ app.get('/health', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`\n🚀 Backend server running on http://localhost:${PORT}`);
-  console.log(`📊 Stock API: http://localhost:${PORT}/api/stock/AAPL`);
+  console.log(`�� Stock API: http://localhost:${PORT}/api/stock/AAPL`);
   console.log(`📰 News API: http://localhost:${PORT}/api/news/AAPL`);
   console.log(`❤️ Health: http://localhost:${PORT}/health\n`);
 }); 

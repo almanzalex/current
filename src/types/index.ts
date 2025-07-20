@@ -15,11 +15,13 @@ export interface Tweet {
   id: string;
   text: string;
   description?: string;
-  author: string;
-  createdAt: string;
+  author?: string;
+  author_username?: string;
+  createdAt?: string;
+  created_at?: string;
   source: string;
-  url: string;
-  score: number;
+  url?: string;
+  score?: number;
   platform: 'reddit' | 'x';
   sentiment: {
     label: string;
