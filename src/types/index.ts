@@ -7,15 +7,25 @@ export interface NewsArticle {
   source: {
     name: string;
   };
+  aiSummary?: string;
 }
 
 // Tweet types
 export interface Tweet {
   id: string;
   text: string;
-  created_at: string;
-  author_username: string;
-  sentiment: SentimentScore;
+  description?: string;
+  author: string;
+  createdAt: string;
+  source: string;
+  url: string;
+  score: number;
+  platform: 'reddit' | 'x';
+  sentiment: {
+    label: string;
+    score: number;
+  };
+  aiSummary?: string;
 }
 
 export interface SentimentScore {

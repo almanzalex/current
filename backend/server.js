@@ -1,10 +1,52 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const OpenAI = require('openai');
 require('dotenv').config({ path: '../.env' });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Initialize OpenAI
+const openai = new OpenAI({
+  apiKey: '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'
+});
+
+// Helper function to generate AI summaries
+async function generateSummary(content, type = 'article') {
+  try {
+    console.log(`Generating AI summary for ${type}...`);
+    let prompt;
+    if (type === 'article') {
+      prompt = `Please provide a concise 2-3 sentence summary of this news article, focusing on the key financial implications:\n\n${content}`;
+    } else {
+      prompt = `Please provide a 1-2 sentence summary of this social media discussion, focusing on the main sentiment and key points:\n\n${content}`;
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { 
+          "role": "system", 
+          "content": "You are a financial analyst providing brief, factual summaries. Focus on key points and market implications. Be concise and objective."
+        },
+        {
+          "role": "user",
+          "content": prompt
+        }
+      ],
+      max_tokens: 150,
+      temperature: 0.3
+    });
+
+    const summary = completion.choices[0].message.content.trim();
+    console.log('AI Summary generated:', summary);
+    return summary;
+  } catch (error) {
+    console.error('OpenAI API error:', error.response?.data || error.message);
+    return null;
+  }
+}
 
 // Middleware
 app.use(cors());
@@ -95,7 +137,7 @@ app.get('/api/stock/:symbol', async (req, res) => {
 app.get('/api/news/:searchTerm', async (req, res) => {
   try {
     const { searchTerm } = req.params;
-    const { timeRange = '24h' } = req.query;
+    const { timeRange = '7d' } = req.query;
     
     console.log(`Fetching news for: ${searchTerm}, timeRange: ${timeRange}`);
 
@@ -173,8 +215,20 @@ app.get('/api/news/:searchTerm', async (req, res) => {
       )
       .slice(0, 10);
 
-    console.log(`Found ${uniqueArticles.length} unique news articles`);
-    res.json(uniqueArticles);
+    // Generate AI summaries for each article
+    const articlesWithSummaries = await Promise.all(
+      uniqueArticles.map(async (article) => {
+        const content = `Title: ${article.title}\n\nDescription: ${article.description}`;
+        const aiSummary = await generateSummary(content, 'article');
+        return {
+          ...article,
+          aiSummary
+        };
+      })
+    );
+
+    console.log(`Found ${articlesWithSummaries.length} unique news articles with AI summaries`);
+    res.json(articlesWithSummaries);
   } catch (error) {
     console.error('News API error:', error.message);
     res.status(500).json({ 
@@ -184,11 +238,11 @@ app.get('/api/news/:searchTerm', async (req, res) => {
   }
 });
 
-// Social Media/Tweets API Route (using Reddit API)
+// Social Media API Route (Reddit only)
 app.get('/api/social/:searchTerm', async (req, res) => {
   try {
     const { searchTerm } = req.params;
-    const { timeRange = '24h' } = req.query;
+    const { timeRange = '7d' } = req.query;
     
     console.log(`Fetching social media data for: ${searchTerm}, timeRange: ${timeRange}`);
 
@@ -249,11 +303,12 @@ app.get('/api/social/:searchTerm', async (req, res) => {
               id: data.id,
               text: data.title,
               description: data.selftext ? data.selftext.substring(0, 200) + '...' : '',
-              author: data.author,
+              author: `r/${subreddit}`,
               createdAt: new Date(data.created_utc * 1000).toISOString(),
               source: `r/${subreddit}`,
               url: `https://reddit.com${data.permalink}`,
               score: data.score,
+              platform: 'reddit',
               sentiment: {
                 label: sentiment,
                 score: (positiveCount - negativeCount) / Math.max(positiveCount + negativeCount, 1)
@@ -263,14 +318,14 @@ app.get('/api/social/:searchTerm', async (req, res) => {
 
         allPosts = allPosts.concat(posts);
         
-        if (allPosts.length >= 15) break;
+        if (allPosts.length >= 10) break;
       } catch (subredditError) {
         console.log(`Subreddit r/${subreddit} failed:`, subredditError.message);
         continue;
       }
     }
 
-    // Sort by score and relevance, remove duplicates
+    // Sort by score and remove duplicates
     const uniquePosts = allPosts
       .filter((post, index, self) => 
         index === self.findIndex(p => p.text === post.text)
@@ -278,8 +333,20 @@ app.get('/api/social/:searchTerm', async (req, res) => {
       .sort((a, b) => b.score - a.score)
       .slice(0, 10);
 
-    console.log(`Found ${uniquePosts.length} social media posts`);
-    res.json(uniquePosts);
+    // Generate AI summaries for each post
+    const postsWithSummaries = await Promise.all(
+      uniquePosts.map(async (post) => {
+        const content = `${post.text}\n\n${post.description || ''}`;
+        const aiSummary = await generateSummary(content, 'social');
+        return {
+          ...post,
+          aiSummary
+        };
+      })
+    );
+
+    console.log(`Found ${postsWithSummaries.length} Reddit posts with AI summaries`);
+    res.json(postsWithSummaries);
   } catch (error) {
     console.error('Social media API error:', error.message);
     res.status(500).json({ 
@@ -291,6 +358,9 @@ app.get('/api/social/:searchTerm', async (req, res) => {
 
 // Health check route
 app.get('/health', (req, res) => {
+  const FINNHUB_API_KEY = process.env.REACT_APP_FINNHUB_API_KEY;
+  const NEWS_API_KEY = process.env.REACT_APP_NEWS_API_KEY;
+
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),

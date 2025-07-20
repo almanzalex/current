@@ -7,9 +7,9 @@ interface NewsPanelProps {
 
 const NewsPanel: React.FC<NewsPanelProps> = ({ news }) => {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-white rounded-lg shadow p-6 h-96 flex flex-col">
       <h2 className="text-xl font-semibold text-gray-900 mb-4">Latest News</h2>
-      <div className="space-y-4">
+      <div className="space-y-4 overflow-y-auto flex-1 pr-2">
         {news.length === 0 ? (
           <p className="text-gray-500">No news articles found.</p>
         ) : (
@@ -31,6 +31,14 @@ const NewsPanel: React.FC<NewsPanelProps> = ({ news }) => {
                   {article.source.name} •{' '}
                   {new Date(article.publishedAt).toLocaleString()}
                 </p>
+                {article.aiSummary ? (
+                  <div className="mb-2">
+                    <p className="text-sm font-medium text-blue-600 mb-1">AI Summary:</p>
+                    <p className="text-sm text-gray-700 bg-blue-50 p-2 rounded">
+                      {article.aiSummary}
+                    </p>
+                  </div>
+                ) : null}
                 <p className="text-gray-600">{article.description}</p>
               </a>
             </article>

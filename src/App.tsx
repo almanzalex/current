@@ -2,7 +2,7 @@ import React, { useEffect, useCallback } from 'react';
 import { useStore } from './store';
 import SearchBar from './components/SearchBar';
 import NewsPanel from './components/NewsPanel';
-import TweetPanel from './components/TweetPanel';
+import SocialPanel from './components/SocialPanel';
 import StockPanel from './components/StockPanel';
 import TimelineChart from './components/TimelineChart';
 import TimeRangeSelector from './components/TimeRangeSelector';
@@ -79,8 +79,8 @@ function App() {
               
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <NewsPanel news={news} />
-                <TweetPanel tweets={tweets} />
-                <StockPanel data={stockData} />
+                <SocialPanel tweets={tweets} />
+                <StockPanel data={stockData} news={news} tweets={tweets} />
               </div>
             </div>
           )}

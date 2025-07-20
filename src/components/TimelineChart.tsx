@@ -43,7 +43,7 @@ const TimelineChart: React.FC = () => {
 
     // Process tweets
     tweets.forEach(tweet => {
-      const timestamp = new Date(tweet.created_at).getTime();
+      const timestamp = new Date(tweet.createdAt).getTime();
       const hour = Math.floor(timestamp / 3600000) * 3600000;
       
       if (!dataMap.has(hour)) {

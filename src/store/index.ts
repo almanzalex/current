@@ -6,7 +6,7 @@ import { stockService } from '../services/stockService';
 
 export const useStore = create<AppState>((set, get) => ({
   searchTerm: '',
-  timeRange: '24h',
+  timeRange: '7d',
   isLoading: false,
   error: null,
   news: [],
