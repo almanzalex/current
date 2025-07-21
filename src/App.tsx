@@ -31,15 +31,15 @@ function App() {
   }, [searchTerm, timeRange, handleFetchData]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-      <header className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200 sticky top-0 z-10">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900">
+      <header className="bg-white/80 dark:bg-gray-900/90 backdrop-blur-sm shadow-sm border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400">
                 Current
               </h1>
-              <p className="mt-1 text-sm text-gray-600">
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
                 Real-time financial intelligence powered by AI
               </p>
             </div>
@@ -59,15 +59,15 @@ function App() {
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
+          <div className="mb-6 bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 rounded-xl p-4">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 text-red-400 dark:text-red-300" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="text-sm text-red-700 font-medium">{error}</p>
+                <p className="text-sm text-red-700 dark:text-red-200 font-medium">{error}</p>
               </div>
             </div>
           </div>
@@ -75,10 +75,10 @@ function App() {
 
         {searchTerm && (
           <div className="mb-6 text-center">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
               Analysis for {searchTerm.toUpperCase()}
             </h2>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               {isLoading ? 'Analyzing market data...' : 'Market intelligence dashboard'}
             </p>
           </div>
@@ -87,8 +87,8 @@ function App() {
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
             <div className="relative">
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200"></div>
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent absolute top-0 left-0"></div>
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 dark:border-blue-900"></div>
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 dark:border-blue-400 border-t-transparent absolute top-0 left-0"></div>
             </div>
           </div>
         ) : searchTerm ? (
