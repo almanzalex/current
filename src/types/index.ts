@@ -1,4 +1,3 @@
-// News types
 export interface NewsArticle {
   title: string;
   description: string;
@@ -10,7 +9,6 @@ export interface NewsArticle {
   aiSummary?: string;
 }
 
-// Tweet types
 export interface Tweet {
   id: string;
   text: string;
@@ -30,30 +28,21 @@ export interface Tweet {
   aiSummary?: string;
 }
 
-export interface SentimentScore {
-  score: number; // -1 to 1
-  label: 'positive' | 'negative' | 'neutral';
-  confidence: number;
+export interface SentimentData {
+  sentiment: number; // -1 to 1
+  confidence: number; // 0 to 1
+  total: number;
+  positive: number;
+  negative: number;
+  neutral: number;
 }
 
-// Stock data types
 export interface StockData {
   timestamp: number;
   price: number;
   volume: number;
 }
 
-// Combined data point for visualization
-export interface TimelineDataPoint {
-  timestamp: string;
-  newsCount: number;
-  averageSentiment: number;
-  stockPrice: number;
-  tweets: Tweet[];
-  news: NewsArticle[];
-}
-
-// Store state types
 export interface AppState {
   searchTerm: string;
   timeRange: '1h' | '24h' | '7d' | '30d';
@@ -62,6 +51,7 @@ export interface AppState {
   news: NewsArticle[];
   tweets: Tweet[];
   stockData: StockData[];
+  sentimentData?: SentimentData;
   setSearchTerm: (term: string) => void;
   setTimeRange: (range: '1h' | '24h' | '7d' | '30d') => void;
   fetchData: (term: string) => Promise<void>;

@@ -35,13 +35,13 @@ const SearchBar: React.FC = () => {
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Search for stocks, companies, or topics (e.g., AAPL, Tesla, AI)"
-          className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Search for stocks, companies, or topics (e.g., AAPL, TSLA, META)"
+          className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
         />
         <div className="absolute inset-y-0 right-0 flex items-center">
           <button
             type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-lg transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-lg transition focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             Search
           </button>

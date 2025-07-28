@@ -1,5 +1,5 @@
 import React from 'react';
-import { StockData, NewsArticle, Tweet } from '../types';
+import { StockData } from '../types';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -9,8 +9,6 @@ import {
   LineElement,
   Title,
   Tooltip,
-  Legend,
-  Filler,
 } from 'chart.js';
 
 ChartJS.register(
@@ -19,18 +17,14 @@ ChartJS.register(
   PointElement,
   LineElement,
   Title,
-  Tooltip,
-  Legend,
-  Filler
+  Tooltip
 );
 
 interface StockPanelProps {
   data: StockData[];
-  news: NewsArticle[];
-  tweets: Tweet[];
 }
 
-const StockPanel: React.FC<StockPanelProps> = ({ data, news, tweets }) => {
+const StockPanel: React.FC<StockPanelProps> = ({ data }) => {
   const chartData = {
     labels: data.map((d, index) => {
       if (data.length <= 6) return new Date(d.timestamp * 1000).toLocaleTimeString();
@@ -136,158 +130,66 @@ const StockPanel: React.FC<StockPanelProps> = ({ data, news, tweets }) => {
     return ((lastPrice - firstPrice) / firstPrice) * 100;
   };
 
-  const analyzeSentiment = () => {
-    const socialSentiments = tweets.map(t => t.sentiment.score);
-    const avgSocialSentiment = socialSentiments.length > 0 
-      ? socialSentiments.reduce((a, b) => a + b, 0) / socialSentiments.length
-      : 0;
-    
-    const positiveTerms = ['growth', 'increase', 'profit', 'bullish', 'up', 'higher', 'beat', 'positive'];
-    const negativeTerms = ['decline', 'decrease', 'loss', 'bearish', 'down', 'lower', 'miss', 'negative'];
-    
-    let positiveCount = 0;
-    let negativeCount = 0;
-    
-    news.forEach(article => {
-      const text = `${article.title} ${article.description} ${article.aiSummary || ''}`.toLowerCase();
-      positiveTerms.forEach(term => {
-        if (text.includes(term)) positiveCount++;
-      });
-      negativeTerms.forEach(term => {
-        if (text.includes(term)) negativeCount++;
-      });
-    });
 
-    const sentimentScore = (positiveCount - negativeCount) / (positiveCount + negativeCount || 1);
-    const socialConfidence = Math.abs(avgSocialSentiment);
-    const newsConfidence = (positiveCount + negativeCount) / (news.length || 1);
-
-    return {
-      overallSentiment: sentimentScore > 0 ? 'Positive' : sentimentScore < 0 ? 'Negative' : 'Neutral',
-      sentimentScore: sentimentScore,
-      socialSentiment: avgSocialSentiment > 0.1 ? 'Positive' : avgSocialSentiment < -0.1 ? 'Negative' : 'Neutral',
-      newsSentiment: positiveCount > negativeCount ? 'Positive' : positiveCount < negativeCount ? 'Negative' : 'Neutral',
-      positiveSignals: positiveCount,
-      negativeSignals: negativeCount,
-      confidence: (socialConfidence + newsConfidence) / 2
-    };
-  };
 
   const generateInsights = () => {
     const priceChange = getPercentageChange();
-    const isUptrend = priceChange > 0;
+    const isUp = priceChange > 0;
     
-    const significantNews = news
-      .filter(article => article.aiSummary)
-      .sort((a, b) => {
-        const aScore = (a.aiSummary?.toLowerCase().includes('significant') || 
-                       a.aiSummary?.toLowerCase().includes('major') ||
-                       a.aiSummary?.toLowerCase().includes('important')) ? 1 : 0;
-        const bScore = (b.aiSummary?.toLowerCase().includes('significant') || 
-                       b.aiSummary?.toLowerCase().includes('major') ||
-                       b.aiSummary?.toLowerCase().includes('important')) ? 1 : 0;
-        return bScore - aScore;
-      })
-      .slice(0, 2);
+    const insights = [];
 
-    const discussionTopics = new Map();
-    tweets.forEach(tweet => {
-      const text = tweet.text.toLowerCase();
-      ['revenue', 'earnings', 'growth', 'product', 'market', 'competition', 'technology', 'management']
-        .forEach(topic => {
-          if (text.includes(topic)) {
-            discussionTopics.set(topic, (discussionTopics.get(topic) || 0) + 1);
-          }
-        });
-    });
-
-    const topTopics = Array.from(discussionTopics.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([topic]) => topic);
-
-    const keyPoints = [];
-
-    keyPoints.push({
+    insights.push({
       type: 'trend',
       icon: 'TrendingUp',
-      text: `Stock ${isUptrend ? 'up' : 'down'} ${Math.abs(priceChange).toFixed(2)}% with ${sentiment.overallSentiment.toLowerCase()} market sentiment`,
-      color: isUptrend ? 'text-green-600' : 'text-red-600',
-      bgColor: isUptrend ? 'bg-green-50' : 'bg-red-50'
+      text: `${isUp ? 'Up' : 'Down'} ${Math.abs(priceChange).toFixed(2)}% this period`,
+      color: isUp ? 'text-green-600' : 'text-red-600',
+      bgColor: isUp ? 'bg-green-50' : 'bg-red-50'
     });
 
     const volume = data[data.length - 1]?.volume || 0;
-    keyPoints.push({
+    insights.push({
       type: 'volume',
       icon: 'BarChart',
-      text: `Trading volume at ${volume.toLocaleString()} shares`,
+      text: `Volume: ${volume.toLocaleString()} shares`,
       color: 'text-gray-700',
       bgColor: 'bg-gray-50'
     });
 
-    if (significantNews.length > 0) {
-      keyPoints.push({
-        type: 'news',
-        icon: 'News',
-        text: 'Key developments: ' + significantNews.map(n => n.aiSummary).join(' '),
-        color: 'text-blue-600',
-        bgColor: 'bg-blue-50'
-      });
-    }
-
-    if (topTopics.length > 0) {
-      keyPoints.push({
-        type: 'social',
-        icon: 'MessageCircle',
-        text: `Most discussed topics: ${topTopics.join(', ')}`,
-        color: 'text-purple-600',
-        bgColor: 'bg-purple-50'
-      });
-    }
-
-    const sentimentCounts = tweets.reduce((acc, tweet) => {
-      acc[tweet.sentiment.label] = (acc[tweet.sentiment.label] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    keyPoints.push({
-      type: 'sentiment',
-      icon: 'Target',
-      text: `Community sentiment: ${
-        Object.entries(sentimentCounts)
-          .sort((a, b) => b[1] - a[1])
-          .map(([label, count]) => `${count} ${label.toLowerCase()}`)
-          .join(', ')
-      }`,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50'
+    const avgVolume = data.reduce((sum, d) => sum + d.volume, 0) / data.length;
+    insights.push({
+      type: 'avgVolume',
+      icon: 'BarChart',
+      text: `Avg volume: ${Math.round(avgVolume).toLocaleString()}`,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50'
     });
 
-    return keyPoints;
+    const prices = data.map(d => d.price);
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    insights.push({
+      type: 'range',
+      icon: 'Minus',
+      text: `Range: $${min.toFixed(2)} - $${max.toFixed(2)}`,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50'
+    });
+
+    return insights;
   };
 
   const percentageChange = getPercentageChange();
   const isPositive = percentageChange >= 0;
-  const sentiment = analyzeSentiment();
   const insights = generateInsights();
 
-  const getSentimentColor = (sentiment: string) => {
-    switch (sentiment.toLowerCase()) {
-      case 'positive':
-        return 'text-green-600';
-      case 'negative':
-        return 'text-red-600';
-      default:
-        return 'text-yellow-600';
-    }
-  };
+
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-h-[600px] flex flex-col">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-900">Stock Performance</h2>
         <div
-          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+          className={`flex items-center px-3 py-1 rounded-full text-sm font-medium ${
             isPositive 
               ? 'text-green-700 bg-green-100' 
               : 'text-red-700 bg-red-100'
@@ -327,46 +229,10 @@ const StockPanel: React.FC<StockPanelProps> = ({ data, news, tweets }) => {
               </div>
             </div>
 
-            <div className="border-t border-gray-200 pt-6 mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Market Sentiment</h3>
-              
-              <div className="flex items-center mb-4">
-                <div className={`inline-flex items-center px-4 py-2 rounded-full text-lg font-semibold ${
-                  sentiment.overallSentiment === 'Positive' ? 'text-green-700 bg-green-100' :
-                  sentiment.overallSentiment === 'Negative' ? 'text-red-700 bg-red-100' :
-                  'text-yellow-700 bg-yellow-100'
-                }`}>
-                  {sentiment.overallSentiment}
-                </div>
-                <span className="ml-3 text-sm text-gray-500">
-                  {(sentiment.confidence * 100).toFixed(1)}% confidence
-                </span>
-              </div>
 
-              <div className="grid grid-cols-1 gap-3">
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-sm text-gray-600">News Analysis ({news.length} articles)</span>
-                  <div className="flex items-center">
-                    <span className={`font-medium ${getSentimentColor(sentiment.newsSentiment)}`}>
-                      {sentiment.newsSentiment}
-                    </span>
-                    <span className="ml-2 text-xs text-gray-500">
-                      {sentiment.positiveSignals}+ {sentiment.negativeSignals}-
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-sm text-gray-600">Social Discussions ({tweets.length} posts)</span>
-                  <span className={`font-medium ${getSentimentColor(sentiment.socialSentiment)}`}>
-                    {sentiment.socialSentiment}
-                  </span>
-                </div>
-              </div>
-            </div>
 
             <div className="border-t border-gray-200 pt-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">AI Market Insights</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Stock Insights</h3>
               <div className="space-y-3">
                 {insights.map((insight, index) => (
                   <div key={index} className={`p-3 rounded-lg ${insight.bgColor}`}>

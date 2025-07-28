@@ -1,18 +1,31 @@
 import React from 'react';
-import { Tweet } from '../types';
+import { Tweet, SentimentData } from '../types';
 
 interface SocialPanelProps {
   tweets: Tweet[];
+  sentimentData?: SentimentData;
 }
 
-const SocialPanel: React.FC<SocialPanelProps> = ({ tweets }) => {
-  const getSentimentColor = (sentiment: number) => {
-    if (sentiment > 0.3) return 'text-green-600 bg-green-100';
-    if (sentiment < -0.3) return 'text-red-600 bg-red-100';
-    return 'text-yellow-600 bg-yellow-100';
+const SocialPanel: React.FC<SocialPanelProps> = ({ tweets, sentimentData }) => {
+  const sentimentColor = (sentiment: number) => {
+    if (sentiment > 0.3) return 'text-green-600 bg-green-50';
+    if (sentiment < -0.3) return 'text-red-600 bg-red-50';
+    return 'text-gray-600 bg-gray-50';
   };
 
-  const getSentimentIcon = (sentiment: number) => {
+  const sentimentIcon = (sentiment: number) => {
+    if (sentiment > 0.3) return '↗';
+    if (sentiment < -0.3) return '↘';
+    return '→';
+  };
+
+  const overallColor = (sentiment: number) => {
+    if (sentiment > 0.3) return 'border-green-200 bg-green-50 text-green-700';
+    if (sentiment < -0.3) return 'border-red-200 bg-red-50 text-red-700';
+    return 'border-gray-200 bg-gray-50 text-gray-700';
+  };
+
+  const overallIcon = (sentiment: number) => {
     if (sentiment > 0.3) return '↗';
     if (sentiment < -0.3) return '↘';
     return '→';
@@ -20,13 +33,9 @@ const SocialPanel: React.FC<SocialPanelProps> = ({ tweets }) => {
 
   const formatDateTime = (dateString: string) => {
     try {
-      console.log('Formatting date string:', dateString);
       const date = new Date(dateString);
-      console.log('Parsed date object:', date);
-      console.log('Is valid date:', !isNaN(date.getTime()));
-      
+        
       if (isNaN(date.getTime())) {
-        console.error('Invalid date string:', dateString);
         return 'Invalid date';
       }
       
@@ -42,31 +51,23 @@ const SocialPanel: React.FC<SocialPanelProps> = ({ tweets }) => {
       
       return `${dateStr} at ${timeStr}`;
     } catch (error) {
-      console.error('Error formatting date:', error);
       return 'Invalid date';
     }
   };
 
   const handleRedditClick = (url: string, postTitle: string) => {
-    console.log('Opening Reddit post - URL:', url);
-    console.log('Post title:', postTitle);
-    console.log('URL type:', typeof url);
-    console.log('URL value:', url);
-    
-    // Check if URL exists and is valid
+    // check url
     if (!url) {
-      console.error('No URL provided for Reddit post');
       alert('Sorry, this Reddit post link is not available.');
       return;
     }
     
-    // Ensure URL is properly formatted
+    // add domain if needed
     let finalUrl = url;
     if (!url.startsWith('http')) {
       finalUrl = `https://www.reddit.com${url}`;
     }
     
-    console.log('Final URL:', finalUrl);
     window.open(finalUrl, '_blank', 'noopener,noreferrer');
   };
 
@@ -74,9 +75,12 @@ const SocialPanel: React.FC<SocialPanelProps> = ({ tweets }) => {
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-h-[600px] flex flex-col">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-gray-900">Reddit Discussions</h2>
-        <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-orange-700 bg-orange-100">
-          {tweets.length} Posts
-        </div>
+        {sentimentData && (
+          <div className={`flex items-center px-3 py-1 rounded-full text-sm font-medium border ${overallColor(sentimentData.sentiment)}`}>
+            <span className="mr-1">{overallIcon(sentimentData.sentiment)}</span>
+            {sentimentData.sentiment.toFixed(2)}
+          </div>
+        )}
       </div>
       
       <div className="flex-1 overflow-y-auto">
@@ -95,11 +99,10 @@ const SocialPanel: React.FC<SocialPanelProps> = ({ tweets }) => {
         ) : (
           <div className="space-y-4">
             {tweets.map((post) => {
-              console.log('Rendering post:', post);
               return (
                 <div
                   key={post.id}
-                  className="group border border-gray-100 rounded-lg p-4 hover:border-gray-200 hover:shadow-sm transition-all duration-200"
+                  className="group border border-gray-100 rounded-lg p-4 hover:border-gray-200 hover:shadow-sm transition-all"
                 >
                   <div className="flex items-start space-x-3">
                     <div className="flex-shrink-0">
@@ -116,13 +119,13 @@ const SocialPanel: React.FC<SocialPanelProps> = ({ tweets }) => {
                           <span className="text-sm font-semibold text-gray-900 truncate">
                             {post.author}
                           </span>
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
                             Reddit
                           </span>
                         </div>
                         
-                        <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getSentimentColor(post.sentiment.score)}`}>
-                          <span className="mr-1">{getSentimentIcon(post.sentiment.score)}</span>
+                        <div className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${sentimentColor(post.sentiment.score)}`}>
+                          <span className="mr-1">{sentimentIcon(post.sentiment.score)}</span>
                           {post.sentiment.label.charAt(0).toUpperCase() + post.sentiment.label.slice(1)}
                         </div>
                       </div>
@@ -141,7 +144,7 @@ const SocialPanel: React.FC<SocialPanelProps> = ({ tweets }) => {
                         <div className="mb-3 p-3 bg-purple-50 border border-purple-100 rounded-lg">
                           <div className="flex items-center mb-2">
                             <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
-                            <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">AI Analysis</span>
+                            <span className="text-xs font-semibold text-purple-700 uppercase">Summary</span>
                           </div>
                           <p className="text-sm text-purple-800 leading-relaxed">
                             {post.aiSummary}
@@ -156,7 +159,7 @@ const SocialPanel: React.FC<SocialPanelProps> = ({ tweets }) => {
                         
                         <button
                           onClick={() => handleRedditClick(post.url || '', post.text)}
-                          className="inline-flex items-center text-orange-600 hover:text-orange-700 transition-colors duration-200 font-medium"
+                          className="flex items-center text-orange-600 hover:text-orange-700 transition-colors font-medium"
                         >
                           <span className="mr-1">View on Reddit</span>
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

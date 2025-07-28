@@ -1,7 +1,7 @@
 {
   "name": "current-backend",
   "version": "1.0.0",
-  "description": "Backend API server for Current app",
+  "description": "Express server for stock dashboard",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

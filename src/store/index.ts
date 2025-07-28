@@ -1,8 +1,9 @@
 import create from 'zustand';
 import { AppState } from '../types';
 import { newsService } from '../services/newsService';
-import { twitterService } from '../services/twitterService';
+import { socialService } from '../services/socialService';
 import { stockService } from '../services/stockService';
+import { sentimentService } from '../services/sentimentService';
 
 export const useStore = create<AppState>((set, get) => ({
   searchTerm: '',
@@ -21,23 +22,26 @@ export const useStore = create<AppState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      // Fetch data in parallel
-      const [newsPromise, tweetsPromise, stockDataPromise] = [
-        newsService.getNews(term, timeRange),
-        twitterService.getTweets(term, timeRange),
-        stockService.getStockData(term, timeRange), // Use term directly as stock symbol
+      // get all data at once
+      const [newsPromise, tweetsPromise, stockDataPromise, sentimentPromise] = [
+        newsService.getNews(term),
+        socialService.getSocialPosts(term),
+        stockService.getStockData(term, timeRange), // only stock uses timeRange
+        sentimentService.getSentiment(term),
       ];
 
-      const [news, tweets, stockData] = await Promise.all([
+      const [news, tweets, stockData, sentimentData] = await Promise.all([
         newsPromise,
         tweetsPromise,
         stockDataPromise,
+        sentimentPromise,
       ]);
 
       set({
         news,
         tweets,
         stockData,
+        sentimentData,
         isLoading: false,
       });
     } catch (error) {

@@ -10,9 +10,6 @@ const NewsPanel: React.FC<NewsPanelProps> = ({ news }) => {
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-h-[600px] flex flex-col">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-gray-900">Latest News</h2>
-        <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-blue-700 bg-blue-100">
-          {news.length} Articles
-        </div>
       </div>
       
       <div className="flex-1 overflow-y-auto">
@@ -33,7 +30,7 @@ const NewsPanel: React.FC<NewsPanelProps> = ({ news }) => {
             {news.map((article, index) => (
               <article
                 key={article.url}
-                className="group border border-gray-100 rounded-lg p-4 hover:border-gray-200 hover:shadow-sm transition-all duration-200"
+                className="group border border-gray-100 rounded-lg p-4 hover:border-gray-200 hover:shadow-sm transition-all"
               >
                 <a
                   href={article.url}
@@ -42,18 +39,18 @@ const NewsPanel: React.FC<NewsPanelProps> = ({ news }) => {
                   className="block"
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-base font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2 pr-4">
+                    <h3 className="text-base font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 pr-4">
                       {article.title}
                     </h3>
                     <div className="flex-shrink-0">
-                      <svg className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
                     </div>
                   </div>
                   
                   <div className="flex items-center text-xs text-gray-500 mb-3 space-x-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 font-medium">
+                    <span className="px-2 py-1 rounded-full bg-gray-100 font-medium">
                       {article.source.name}
                     </span>
                     <span>•</span>
@@ -66,7 +63,7 @@ const NewsPanel: React.FC<NewsPanelProps> = ({ news }) => {
                     <div className="mb-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
                       <div className="flex items-center mb-2">
                         <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                        <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">AI Summary</span>
+                        <span className="text-xs font-semibold text-blue-700 uppercase">Summary</span>
                       </div>
                       <p className="text-sm text-blue-800 leading-relaxed">
                         {article.aiSummary}
