@@ -21,7 +21,7 @@ Search for any stock symbol and get:
 ## Setup Instructions
 
 ### Prerequisites
-- Node.js (18+)
+- Node.js
 - API keys for:
   - Alpha Vantage (free at alphavantage.co)
   - News API (free at newsapi.org)
@@ -61,6 +61,45 @@ Search for any stock symbol and get:
 5. **Open your browser**
    Go to `http://localhost:3000`
 
+## Deployment
+
+### Backend Deployment (Render)
+
+1. **Create a new Web Service on Render**
+   - Connect your GitHub repo
+   - Set **Root Directory**: `backend`
+   - Set **Build Command**: `npm install`
+   - Set **Start Command**: `npm start`
+
+2. **Add Environment Variables**
+   ```
+   ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
+   NEWS_API_KEY=your_news_api_key
+   OPENAI_API_KEY=your_openai_key
+   PORT=10000
+   ```
+
+3. **Note your backend URL** (e.g., `https://your-app-name.onrender.com`)
+
+### Frontend Deployment 
+
+1. **Set environment variable for frontend**
+   - Create `.env` file in root directory:
+   ```
+   REACT_APP_BACKEND_URL=https://your-backend-url.onrender.com
+   ```
+
+2. **Deploy frontend on Vercel/Netlify**
+   - Build command: `npm run build`
+   - Publish directory: `build`
+   - Add environment variable: `REACT_APP_BACKEND_URL=https://your-backend-url.onrender.com`
+
+### Common Issues
+
+- **Backend sleeping**: Render free tier sleeps after 15 minutes. First request may be slow.
+- **CORS errors**: Make sure backend allows your frontend domain.
+- **Environment variables**: Double-check all API keys are set correctly.
+
 ## Tech Stack
 
 **Frontend:**
@@ -95,7 +134,7 @@ For the broader community, it shows how social media has become a real factor in
 
 **Reddit scraping:** Since Reddit doesn't have an official finance API, I had to learn how to scrape their JSON endpoints responsibly. This taught me about handling different data structures and implementing basic sentiment analysis.
 
-**Real-time data management:** Managing multiple API calls and keeping data in sync was trickier than expected. I learned about Promise.all() for parallel requests and how to structure state management for complex data flows.
+**Data management:** Managing multiple API calls and keeping data in sync was trickier than expected. I learned about Promise.all() for parallel requests and how to structure state management for complex data flows.
 
 ### Why I chose these technologies
 
@@ -125,11 +164,3 @@ The biggest lesson was that building something that "just works" requires handli
 - Portfolio tracking features
 - Price alerts and notifications
 - Mobile-responsive design improvements
-
-## Contributing
-
-Feel free to open issues or submit PRs if you find bugs or want to add features!
-
-## License
-
-MIT License - feel free to use this code for your own projects.

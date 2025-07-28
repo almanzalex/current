@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3001;
 
 // openai setup
 const openai = new OpenAI({
-  apiKey: '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'
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 async function generateSummary(content, type = 'article') {
@@ -201,104 +201,76 @@ app.get('/api/news/:searchTerm', async (req, res) => {
   }
 });
 
-// Social Media API Route (Reddit only)
+// Helper function to calculate sentiment
+function calculateSentiment(text) {
+  const lowerText = text.toLowerCase();
+  const positiveWords = ['buy', 'bull', 'bullish', 'up', 'gain', 'profit', 'good', 'great', 'excellent', 'strong', 'rise', 'moon'];
+  const negativeWords = ['sell', 'bear', 'bearish', 'down', 'loss', 'bad', 'terrible', 'weak', 'drop', 'crash', 'fall'];
+  
+  const positiveCount = positiveWords.filter(word => lowerText.includes(word)).length;
+  const negativeCount = negativeWords.filter(word => lowerText.includes(word)).length;
+  
+  if (positiveCount > negativeCount) return 0.5;
+  if (negativeCount > positiveCount) return -0.5;
+  return 0;
+}
+
+// Social media endpoint - Reddit scraping
 app.get('/api/social/:searchTerm', async (req, res) => {
   try {
     const { searchTerm } = req.params;
-    const timeFilter = 'week';
-
-    const subreddits = ['stocks', 'investing', 'SecurityAnalysis', 'StockMarket', 'wallstreetbets'];
-    let allPosts = [];
-
+    
+    const results = [];
+    const subreddits = ['stocks', 'StockMarket', 'investing', 'wallstreetbets'];
+    
     for (const subreddit of subreddits) {
+      const url = `https://www.reddit.com/r/${subreddit}/search.json?q=${encodeURIComponent(searchTerm)}&sort=new&limit=5&t=week`;
+      
       try {
-        const response = await axios.get(`https://www.reddit.com/r/${subreddit}/search.json`, {
-          params: {
-            q: searchTerm,
-            restrict_sr: 1,
-            sort: 'new',
-            t: timeFilter,
-            limit: 5
-          },
+        const response = await axios.get(url, {
           headers: {
-            'User-Agent': 'CurrentApp/1.0 (by /u/currentapp)'
-          }
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+          },
+          timeout: 10000
         });
 
-        if (!response.data?.data?.children) {
-          continue;
+        if (response.data && response.data.data && response.data.data.children) {
+          const posts = response.data.data.children.map(post => ({
+            title: post.data.title,
+            content: post.data.selftext || '',
+            url: `https://reddit.com${post.data.permalink}`,
+            score: post.data.score,
+            subreddit: post.data.subreddit,
+            created: new Date(post.data.created_utc * 1000).toISOString(),
+            sentiment: calculateSentiment(post.data.title + ' ' + (post.data.selftext || ''))
+          }));
+          
+          results.push(...posts);
         }
-
-        const posts = response.data.data.children
-          .filter(post => post.data.title && post.data.selftext !== '[removed]')
-          .map(post => {
-            const data = post.data;
-
-            const text = `${data.title} ${data.selftext || ''}`.toLowerCase();
-            const positiveWords = ['buy', 'bullish', 'up', 'gain', 'profit', 'good', 'great', 'excellent', 'strong'];
-            const negativeWords = ['sell', 'bearish', 'down', 'loss', 'bad', 'terrible', 'weak', 'drop', 'crash'];
-            
-            const positiveCount = positiveWords.filter(word => text.includes(word)).length;
-            const negativeCount = negativeWords.filter(word => text.includes(word)).length;
-            
-            let sentiment = 'neutral';
-            if (positiveCount > negativeCount) sentiment = 'positive';
-            else if (negativeCount > positiveCount) sentiment = 'negative';
-            const postUrl = data.permalink 
-              ? `https://www.reddit.com${data.permalink}`
-              : data.url?.startsWith('http') 
-                ? data.url 
-                : `https://www.reddit.com/r/${data.subreddit || subreddit}`;
-
-            return {
-              id: data.id || `reddit_${Date.now()}_${Math.random()}`,
-              text: data.title || 'Reddit Post',
-              description: data.selftext ? data.selftext.substring(0, 200) + '...' : '',
-              author: `r/${data.subreddit || subreddit}`,
-              createdAt: data.created_utc ? new Date(data.created_utc * 1000).toISOString() : new Date().toISOString(),
-              source: `r/${data.subreddit || subreddit}`,
-              url: postUrl,
-              score: data.score || 0,
-              platform: 'reddit',
-              sentiment: {
-                label: sentiment,
-                score: (positiveCount - negativeCount) / Math.max(positiveCount + negativeCount, 1)
-              }
-            };
-          });
-
-        allPosts = allPosts.concat(posts);
         
-        if (allPosts.length >= 10) break;
-      } catch (subredditError) {
-        continue;
+        // Add delay between requests
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+      } catch (err) {
+        console.error(`Error fetching from r/${subreddit}:`, err.message);
       }
     }
-    const uniquePosts = allPosts
-      .filter((post, index, self) => 
-        index === self.findIndex(p => p.text === post.text)
-      )
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    
+    // Sort by date and limit
+    const sortedResults = results
+      .sort((a, b) => new Date(b.created) - new Date(a.created))
       .slice(0, 10);
-
-    // Debug: Log the sorted posts with their dates
-
-
-    const postsWithSummaries = await Promise.all(
-      uniquePosts.map(async (post) => {
-        const content = `${post.text}\n\n${post.description || ''}`;
-        const aiSummary = await generateSummary(content, 'social');
-        return { ...post, aiSummary };
-      })
-    );
-
-    res.json(postsWithSummaries);
+    
+    res.json(sortedResults);
   } catch (error) {
-    console.error('Social media API error:', error.message);
-    res.status(500).json({ 
-      error: 'Failed to fetch social media data',
-      details: error.message 
-    });
+    console.error('Social endpoint error:', error);
+    res.status(500).json({ error: 'Failed to fetch social data' });
   }
 });
 
