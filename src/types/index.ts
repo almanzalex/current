@@ -12,20 +12,17 @@ export interface NewsArticle {
 export interface Tweet {
   id: string;
   text: string;
-  description?: string;
-  author?: string;
-  author_username?: string;
-  createdAt?: string;
-  created_at?: string;
-  source: string;
   url?: string;
-  score?: number;
-  platform: 'reddit' | 'x';
-  sentiment: {
-    label: string;
-    score: number;
-  };
-  aiSummary?: string;
+  author: string;
+  createdAt: string;
+  sentiment: number;
+  summary?: string;
+}
+
+export interface SocialResponse {
+  posts: Tweet[];
+  message?: string;
+  isBlocked?: boolean;
 }
 
 export interface SentimentData {

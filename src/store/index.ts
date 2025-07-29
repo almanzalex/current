@@ -1,48 +1,53 @@
-import create from 'zustand';
-import { AppState } from '../types';
+import { create } from 'zustand';
+import { StockData, NewsArticle, Tweet, SentimentData, SocialResponse } from '../types';
+import { stockService } from '../services/stockService';
 import { newsService } from '../services/newsService';
 import { socialService } from '../services/socialService';
-import { stockService } from '../services/stockService';
 import { sentimentService } from '../services/sentimentService';
 
+interface AppState {
+  stockData: StockData[];
+  news: NewsArticle[];
+  tweets: Tweet[] | SocialResponse;
+  sentimentData: SentimentData | null;
+  isLoading: boolean;
+  error: string | null;
+  currentSymbol: string;
+  timeRange: string;
+  fetchData: (symbol: string, timeRange: string) => Promise<void>;
+}
+
 export const useStore = create<AppState>((set, get) => ({
-  searchTerm: '',
-  timeRange: '7d',
-  isLoading: false,
-  error: null,
+  stockData: [],
   news: [],
   tweets: [],
-  stockData: [],
+  sentimentData: null,
+  isLoading: false,
+  error: null,
+  currentSymbol: '',
+  timeRange: '24h',
 
-  setSearchTerm: (term: string) => set({ searchTerm: term }),
-  setTimeRange: (range: '1h' | '24h' | '7d' | '30d') => set({ timeRange: range }),
-
-  fetchData: async (term: string) => {
-    const { timeRange } = get();
+  fetchData: async (symbol: string, timeRange: string) => {
     set({ isLoading: true, error: null });
 
     try {
       // get all data at once
-      const [newsPromise, tweetsPromise, stockDataPromise, sentimentPromise] = [
-        newsService.getNews(term),
-        socialService.getSocialPosts(term),
-        stockService.getStockData(term, timeRange), // only stock uses timeRange
-        sentimentService.getSentiment(term),
-      ];
-
-      const [news, tweets, stockData, sentimentData] = await Promise.all([
-        newsPromise,
-        tweetsPromise,
-        stockDataPromise,
-        sentimentPromise,
+      const [stockData, newsData, socialData, sentimentData] = await Promise.all([
+        stockService.getStockData(symbol, timeRange),
+        newsService.getNews(symbol),
+        socialService.getSocialPosts(symbol),
+        sentimentService.getSentiment(symbol)
       ]);
 
       set({
-        news,
-        tweets,
         stockData,
+        news: newsData,
+        tweets: socialData,
         sentimentData,
         isLoading: false,
+        error: null,
+        currentSymbol: symbol,
+        timeRange
       });
     } catch (error) {
       set({

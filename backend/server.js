@@ -235,88 +235,133 @@ app.get('/api/social/:searchTerm', async (req, res) => {
             'Accept-Encoding': 'gzip, deflate, br',
             'DNT': '1',
             'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
+            'Upgrade-Insecure-Requests': '1'
           },
-          timeout: 10000
+          timeout: 5000
         });
-
+        
         if (response.data && response.data.data && response.data.data.children) {
-          const posts = response.data.data.children.map(post => ({
-            title: post.data.title,
-            content: post.data.selftext || '',
-            url: `https://reddit.com${post.data.permalink}`,
-            score: post.data.score,
-            subreddit: post.data.subreddit,
-            created: new Date(post.data.created_utc * 1000).toISOString(),
-            sentiment: calculateSentiment(post.data.title + ' ' + (post.data.selftext || ''))
-          }));
+          const posts = response.data.data.children
+            .map(child => child.data)
+            .filter(post => post.title && !post.over_18)
+            .slice(0, 5)
+            .map(post => ({
+              id: post.id,
+              text: post.title + (post.selftext ? ' ' + post.selftext : ''),
+              url: `https://www.reddit.com${post.permalink}`,
+              author: `r/${post.subreddit}`,
+              createdAt: new Date(post.created_utc * 1000).toISOString(),
+              sentiment: calculateSentiment(post.title + ' ' + (post.selftext || ''))
+            }));
           
           results.push(...posts);
         }
-        
-        // Add delay between requests
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-      } catch (err) {
-        console.error(`Error fetching from r/${subreddit}:`, err.message);
+      } catch (error) {
+        console.error(`Error fetching from r/${subreddit}:`, error.message);
       }
     }
     
-    // Sort by date and limit
-    const sortedResults = results
-      .sort((a, b) => new Date(b.created) - new Date(a.created))
-      .slice(0, 10);
+    // If no results, return helpful message
+    if (results.length === 0) {
+      return res.json({
+        posts: [],
+        message: "Reddit data unavailable - run locally for social sentiment analysis",
+        isBlocked: true
+      });
+    }
     
-    res.json(sortedResults);
+    // Sort by creation date
+    results.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
+    // Generate summaries
+    const postsWithSummaries = await Promise.all(
+      results.slice(0, 10).map(async (post) => {
+        try {
+          const summary = await generateSummary(post.text, 'social');
+          return { ...post, summary };
+        } catch (error) {
+          return { ...post, summary: 'Summary unavailable' };
+        }
+      })
+    );
+    
+    res.json({ posts: postsWithSummaries });
   } catch (error) {
-    console.error('Social endpoint error:', error);
-    res.status(500).json({ error: 'Failed to fetch social data' });
+    console.error('Error in social endpoint:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch social media data',
+      posts: [],
+      message: "Reddit data unavailable - run locally for social sentiment analysis",
+      isBlocked: true
+    });
   }
 });
 
-// Sentiment API Route
+// Sentiment analysis endpoint
 app.get('/api/sentiment/:searchTerm', async (req, res) => {
   try {
     const { searchTerm } = req.params;
-    const socialResponse = await axios.get(`http://localhost:3001/api/social/${encodeURIComponent(searchTerm)}`);
-    const socialPosts = socialResponse.data;
-
-    if (!socialPosts?.length) {
+    
+    // Get social data from our endpoint
+    const socialResponse = await axios.get(`http://localhost:${PORT}/api/social/${encodeURIComponent(searchTerm)}`);
+    const socialData = socialResponse.data;
+    
+    // Check if Reddit data is blocked
+    if (socialData.isBlocked || !socialData.posts || socialData.posts.length === 0) {
       return res.json({
-        sentiment: 0, confidence: 0, totalPosts: 0,
-        positivePosts: 0, negativePosts: 0, neutralPosts: 0
+        sentiment: 0,
+        confidence: 0,
+        total: 0,
+        positive: 0,
+        negative: 0,
+        neutral: 0,
+        message: "Reddit data unavailable - run locally for social sentiment analysis",
+        isBlocked: true
       });
     }
+    
+    const posts = socialData.posts;
     let totalSentiment = 0;
-    let positiveCount = 0;
-    let negativeCount = 0;
-    let neutralCount = 0;
-
-    socialPosts.forEach(post => {
-      const sentiment = post.sentiment?.score || 0;
+    let positive = 0;
+    let negative = 0;
+    let neutral = 0;
+    
+    posts.forEach(post => {
+      const sentiment = post.sentiment || 0;
       totalSentiment += sentiment;
       
-      if (sentiment > 0.1) positiveCount++;
-      else if (sentiment < -0.1) negativeCount++;
-      else neutralCount++;
+      if (sentiment > 0.1) positive++;
+      else if (sentiment < -0.1) negative++;
+      else neutral++;
     });
-
-    const averageSentiment = totalSentiment / socialPosts.length;
-    const confidence = Math.abs(averageSentiment);
-
+    
+    const avgSentiment = posts.length > 0 ? totalSentiment / posts.length : 0;
+    const confidence = posts.length > 0 ? Math.min(posts.length / 10, 1) : 0;
+    
+    // keep in -1 to 1 range
+    const clampedSentiment = Math.max(-1, Math.min(1, avgSentiment));
+    
     res.json({
-      sentiment: Math.max(-1, Math.min(1, averageSentiment)), // keep in -1 to 1 range
-      confidence: Math.min(1, confidence),
-      total: socialPosts.length,
-      positive: positiveCount,
-      negative: negativeCount,
-      neutral: neutralCount
+      sentiment: clampedSentiment,
+      confidence,
+      total: posts.length,
+      positive,
+      negative,
+      neutral
     });
+    
   } catch (error) {
-    console.error('Sentiment API error:', error.message);
+    console.error('Sentiment calculation error:', error);
     res.status(500).json({ 
       error: 'Failed to calculate sentiment',
-      details: error.message 
+      sentiment: 0,
+      confidence: 0,
+      total: 0,
+      positive: 0,
+      negative: 0,
+      neutral: 0,
+      message: "Reddit data unavailable - run locally for social sentiment analysis",
+      isBlocked: true
     });
   }
 });
