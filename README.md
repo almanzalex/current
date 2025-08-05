@@ -1,166 +1,163 @@
-# Current - Stock Dashboard
+# Current - Local Stock Dashboard
 
-A simple stock dashboard that shows real-time price data, news, and social sentiment from Reddit discussions.
+A real-time financial dashboard that aggregates stock prices, news, and Reddit discussions in one clean interface. **Designed for local development** to access all features including Reddit sentiment analysis.
 
 ## What it does
 
 Search for any stock symbol and get:
 - **Live stock prices** with interactive charts (1h, 24h, 7d, 30d views)
-- **Recent news articles** about the company
-- **Reddit sentiment analysis** from investing communities
-- **Basic stock insights** like price changes and volume
+- **Recent news articles** with AI-powered summaries
+- **Reddit discussions** from investing communities (r/stocks, r/investing, r/wallstreetbets)
+- **Sentiment analysis** of social discussions
+- **Real-time market data** including volume and price changes
 
 ## Screenshots
 
-*Screenshots and demo videos will be added to `/assets` folder*
+![Dashboard Overview](assets/Screenshot%202025-07-28%20at%2011.34.17%20PM.png)
+*Main dashboard showing stock data, news, and social discussions*
 
-## Live Demo
+![Detailed View](assets/Screenshot%202025-07-28%20at%2011.34.34%20PM.png)
+*Interactive charts with sentiment analysis*
 
-*Deployed application link coming soon*
-
-## Setup Instructions
+## Local Development Setup
 
 ### Prerequisites
-- Node.js
+- Node.js (18+)
 - API keys for:
   - Alpha Vantage (free at alphavantage.co)
   - News API (free at newsapi.org)
-  - OpenAI (optional, for summaries)
+  - OpenAI (optional, for AI summaries)
 
 ### Installation
 
-1. **Clone the repo**
+1. **Clone the repository**
    ```bash
-   git clone <your-repo-url>
+   git clone <repository-url>
    cd current
    ```
 
 2. **Install dependencies**
    ```bash
+   # Install frontend dependencies
    npm install
-   cd backend && npm install
+   
+   # Install backend dependencies
+   cd backend && npm install && cd ..
    ```
 
 3. **Set up environment variables**
-   Create `.env` file in root:
+   
+   Create a `.env` file in the root directory:
+   ```bash
+   # Required for local development
+   REACT_APP_BACKEND_URL=http://localhost:3001
+   
+   # Optional: For AI summaries
+   OPENAI_API_KEY=your_openai_key_here
    ```
-   ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
-   NEWS_API_KEY=your_news_api_key
-   OPENAI_API_KEY=your_openai_key
+   
+   The backend API keys are already configured, but you can add your own in `backend/server.js`:
+   ```javascript
+   const ALPHA_VANTAGE_API_KEY = 'your_key_here';
+   const NEWS_API_KEY = 'your_key_here';
    ```
 
-4. **Start the servers**
-   ```bash
-   # Terminal 1 - Backend
-   cd backend && npm start
+4. **Start the application**
    
-   # Terminal 2 - Frontend  
+   **Terminal 1 - Backend:**
+   ```bash
+   cd backend
+   npm start
+   ```
+   
+   **Terminal 2 - Frontend:**
+   ```bash
    npm start
    ```
 
-5. **Open your browser**
-   Go to `http://localhost:3000`
+5. **Access the application**
+   - Frontend: http://localhost:3000
+   - Backend health: http://localhost:3001/health
 
-## Deployment
+## Features
 
-### Backend Deployment (Render)
+### ✅ Stock Data
+- Real-time price charts
+- Multiple time ranges (1h, 24h, 7d, 30d)
+- Volume and price change data
+- Powered by Alpha Vantage API
 
-1. **Create a new Web Service on Render**
-   - Connect your GitHub repo
-   - Set **Root Directory**: `backend`
-   - Set **Build Command**: `npm install`
-   - Set **Start Command**: `npm start`
+### ✅ News Integration  
+- Recent financial news
+- AI-powered article summaries (with OpenAI key)
+- Multiple news sources
 
-2. **Add Environment Variables**
-   ```
-   ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
-   NEWS_API_KEY=your_news_api_key
-   OPENAI_API_KEY=your_openai_key
-   PORT=10000
-   ```
+### ✅ Reddit Social Sentiment
+- Live Reddit discussions from investing communities
+- Sentiment analysis of posts and comments
+- Individual post sentiment scoring
+- Overall sentiment metrics with confidence scores
 
-3. **Note your backend URL** (e.g., `https://your-app-name.onrender.com`)
+### ✅ Interactive UI
+- Real-time data updates
+- Responsive design
+- Clean, professional interface
+- Error handling and loading states
 
-### Frontend Deployment 
+## Architecture
 
-1. **Set environment variable for frontend**
-   - Create `.env` file in root directory:
-   ```
-   REACT_APP_BACKEND_URL=https://your-backend-url.onrender.com
-   ```
+**Frontend**: React + TypeScript + Tailwind CSS + Chart.js + Zustand  
+**Backend**: Node.js + Express + Axios  
+**APIs**: Alpha Vantage (stocks) + News API + Reddit scraping + OpenAI  
+**Environment**: Local development focused
 
-2. **Deploy frontend on Vercel/Netlify**
-   - Build command: `npm run build`
-   - Publish directory: `build`
-   - Add environment variable: `REACT_APP_BACKEND_URL=https://your-backend-url.onrender.com`
+## Why Local Development?
 
-### Common Issues
+This application is designed to run locally because:
+- **Reddit Access**: Cloud servers are often blocked by Reddit, but local development has full access
+- **API Flexibility**: No rate limiting from deployment platforms
+- **Real-time Performance**: Direct local connections for faster data fetching
+- **Full Feature Set**: All sentiment analysis and social features work without restrictions
 
-- **Backend sleeping**: Render free tier sleeps after 15 minutes. First request may be slow.
-- **CORS errors**: Make sure backend allows your frontend domain.
-- **Environment variables**: Double-check all API keys are set correctly.
+## Troubleshooting
 
-## Tech Stack
+### Backend Connection Issues
+- Ensure backend is running: `curl http://localhost:3001/health`
+- Check `.env` file has `REACT_APP_BACKEND_URL=http://localhost:3001`
+- Restart both frontend and backend if needed
 
-**Frontend:**
-- React with TypeScript
-- Chart.js for graphs
-- Tailwind CSS for styling
-- Zustand for state management
+### Missing Data
+- **Stock data**: Verify Alpha Vantage API key in `backend/server.js`
+- **News**: Check News API key configuration
+- **Reddit**: Should work automatically in local environment
 
-**Backend:**
-- Node.js with Express
-- Axios for API calls
-- Reddit scraping for social data
+### API Rate Limits
+- Alpha Vantage: 5 calls per minute (free tier)
+- News API: 1000 calls per day (free tier)
+- Reddit: No API key needed, scraping-based
 
-## Learning Journey
+## Development Journey
 
 ### What inspired this project
+I wanted to create a unified dashboard that combines traditional financial data with modern social sentiment. With Reddit's growing influence on retail trading, it felt important to build a tool that could track both market fundamentals and community discussions in real-time.
 
-I wanted to build something that combines different types of financial data in one place. Most stock apps just show prices, but I was curious about how social media sentiment might correlate with stock movements. Reddit has become a huge influence on retail trading, so I thought it would be interesting to track that alongside traditional metrics.
-
-### Potential impact
-
-For retail investors, this could help them:
-- **Save time** by seeing news, prices, and sentiment in one dashboard
-- **Make more informed decisions** by considering social sentiment alongside traditional data
-- **Spot trending discussions** about stocks they're interested in
-
-For the broader community, it shows how social media has become a real factor in modern investing, and tools like this could help people understand that relationship better.
+### Key challenges solved
+- **Reddit Access**: Built robust local Reddit scraping with sentiment analysis
+- **API Integration**: Unified different API formats into consistent interfaces  
+- **Real-time Updates**: Synchronized multiple data sources efficiently
+- **Local Performance**: Optimized for local development with full feature access
 
 ### What I learned
+- Financial APIs have unique challenges (market hours, rate limits, data gaps)
+- Social sentiment adds valuable context to traditional metrics
+- Local development provides the best user experience for this type of application
+- The importance of clear environment configuration for reliable setup
 
-**Alpha Vantage API:** This was my first time working with financial data APIs. I learned how to handle different time series formats and deal with rate limiting. The biggest challenge was figuring out how to generate consistent 1-hour data when markets are closed.
+## Future Improvements
 
-**Reddit scraping:** Since Reddit doesn't have an official finance API, I had to learn how to scrape their JSON endpoints responsibly. This taught me about handling different data structures and implementing basic sentiment analysis.
-
-**Data management:** Managing multiple API calls and keeping data in sync was trickier than expected. I learned about Promise.all() for parallel requests and how to structure state management for complex data flows.
-
-### Why I chose these technologies
-
-- **React + TypeScript:** Wanted type safety for handling financial data
-- **Chart.js:** Needed something reliable for time-series charts
-- **Express:** Simple backend that could handle multiple API integrations
-- **Tailwind:** Wanted to focus on functionality over custom CSS
-
-### Challenges and lessons
-
-**API rate limits:** Alpha Vantage has strict limits, so I had to implement smart caching and data reuse. Learned the importance of reading API docs carefully.
-
-**Data inconsistency:** Different APIs return data in different formats and timezones. Spent a lot of time normalizing everything to work together smoothly.
-
-**Reddit sentiment:** Basic keyword matching isn't perfect for sentiment analysis, but it gives a decent approximation. Made me appreciate how complex natural language processing really is.
-
-**State management:** With multiple data sources updating at different rates, keeping the UI in sync was challenging. Learned a lot about when to fetch new data vs. reuse existing data.
-
-**Error handling:** Financial APIs can fail or return unexpected data. Building robust error handling taught me to always expect the unexpected when dealing with external services.
-
-The biggest lesson was that building something that "just works" requires handling a lot of edge cases you don't think about initially. But seeing it all come together and actually being useful made it worth the effort.
-
-## Future improvements
-
-- Better sentiment analysis (maybe integrate a proper NLP service)
-- More social platforms beyond Reddit
-- Portfolio tracking features
-- Price alerts and notifications
-- Mobile-responsive design improvements
+- Enhanced sentiment analysis using advanced NLP models
+- Additional social platforms (Twitter, Discord)
+- Historical sentiment tracking
+- Portfolio management features
+- WebSocket real-time data feeds
+- Mobile-responsive enhancements

@@ -1,18 +1,29 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+require('dotenv').config();
 const OpenAI = require('openai');
-require('dotenv').config({ path: '../.env' });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// openai setup
-const openai = new OpenAI({
+// openai setup - optional
+let openai = null;
+try {
+  if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your_openai_key_here') {
+    openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
+  }
+} catch (error) {
+  console.log('OpenAI not configured, summaries will be unavailable');
+}
 
 async function generateSummary(content, type = 'article') {
+  if (!openai) {
+    return null;
+  }
+  
   try {
     const prompt = type === 'article' 
       ? `Summarize this in 2-3 sentences, focus on financial impact:\n\n${content}`
@@ -40,8 +51,8 @@ app.use(cors());
 app.use(express.json());
 
 // API Keys
-const ALPHA_VANTAGE_API_KEY = 'RS9IVVUP8KI6N4QH';
-const NEWS_API_KEY = process.env.REACT_APP_NEWS_API_KEY || '0d1612bb8edc4f2393e69b566f80a3aa';
+const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '9HDHBOMPEKMCCPZ0';
+const NEWS_API_KEY = process.env.NEWS_API_KEY || '0d1612bb8edc4f2393e69b566f80a3aa';
 
 console.log('Starting server...');
 console.log('Alpha Vantage API:', ALPHA_VANTAGE_API_KEY ? 'OK' : 'missing');

@@ -12,7 +12,7 @@ const NewsPanel: React.FC<NewsPanelProps> = ({ news }) => {
         <h2 className="text-xl font-semibold text-gray-900">Latest News</h2>
       </div>
       
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scrollbar-thin">
         {news.length === 0 ? (
           <div className="flex items-center justify-center h-64 text-gray-500">
             <div className="text-center">

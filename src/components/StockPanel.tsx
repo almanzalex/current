@@ -200,11 +200,15 @@ const StockPanel: React.FC<StockPanelProps> = ({ data }) => {
         </div>
       </div>
       
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scrollbar-thin">
         {data.length === 0 ? (
           <div className="flex items-center justify-center h-64 text-gray-500">
             <div className="text-center">
-              <div className="text-4xl mb-2">📊</div>
+              <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
               <p>No stock data available</p>
             </div>
           </div>
@@ -237,7 +241,9 @@ const StockPanel: React.FC<StockPanelProps> = ({ data }) => {
                 {insights.map((insight, index) => (
                   <div key={index} className={`p-3 rounded-lg ${insight.bgColor}`}>
                     <div className="flex items-start space-x-3">
-                      <div className={`w-2 h-2 rounded-full mt-2 ${insight.color.replace('text-', 'bg-')}`} />
+                      {insight.type !== 'avgVolume' && (
+                        <div className={`w-2 h-2 rounded-full mt-2 ${insight.color.replace('text-', 'bg-')}`} />
+                      )}
                       <p className="text-sm text-gray-700 flex-1">{insight.text}</p>
                     </div>
                   </div>
